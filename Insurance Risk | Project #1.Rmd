@@ -1,0 +1,333 @@
+---
+title: 'Insurance Risk  Project #1'
+author: "Robert Mead"
+date: "7/5/2021"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+\newpage
+## Introduction
+An insurance company has \$1,000,000 in assets and 1,000 customers paying a \$5,000 premium at the beginning of each year. The scope of the project is to find the probability of bankruptcy for the insurance company  and estimate the amount of money the bank will make in a specific time frame. The Pareto Distribution, $f(x)$, is used to characterize the size of the insurance claim that a customer has. Similarly, company assets can be characterized by a piece wise function $Z(t)$. To encapsulate a full understanding of the Pareto Distribution and its effects on many observations there will be 10,000 simulations of the distribution to provide clarity in how the analytical and experimental statistics compare to each other. Through the extensive simualtion this will provide an opportunity to determine the likelihood of the insurance company from going bankrupt.
+
+The Pareto Distribution,$f(x)$ and the piece wise function,$Z(t)$ are below.
+
+$$f(x) = \left\{ \begin{array}{cc} 
+                \frac{ab^a}{(x+b)^{(a+1)}} & \hspace{5mm} x\ge0 \\
+                0 & \hspace{5mm} x<0 \\
+                \end{array} \right.$$
+
+$$\begin{gather*}
+Z(1) &=& 1,000,000 \\
+Z(t) &=& \left\{ \begin{array}{cc} 
+                max[Z(t-1)+premiums - claims,0] & \hspace{5mm} t>1 \\
+                0 & \hspace{5mm} t<1 \\
+                \end{array} \right.
+\end{gather*}$$
+
+## Analytical Calculations 
+### Expected Value
+Given the probability density function of the Pareto Distribution enables calculation of the expected value, $E[X]$, the variance, $Var[X]$, the skewness and excess kurtosis. Analytically calculating these statistics from the distribution will provide a reference point for the accuracy of the 10,000 simulations. 
+
+To calculate the expected value, or the first moment,  of the probability density function of the Pareto Distribution the following steps are provided below:
+
+$$\begin{eqnarray*}
+E[X] &=& \int_{0}^{\infty} \frac{xab^a}{(x+b)^{(a+1)}} \,dx \\
+     &=& ab^a\int_{0}^{\infty} x(x+b)^{-(a+1)} \,dx  \\
+     &=& ab^a\int_{0}^{\infty} x(x+b)^{-a-1} \,dx \\
+     &=& ab^a\biggl(\frac{-x(x+b)^{-a}}{a}+\int_{0}^{\infty} \frac{(x+b)^{-a}}{a} \,dx\biggr) \\
+     &=& ab^a\biggl(\lim_{n\to\infty}\frac{-x(x+b)^{-a}}{a}+\lim_{n\to\infty}\biggl(\frac{(x+b)^{-a+1}}{a(-a+1)}\biggr)\biggr) \Big|_0^n \ \\
+     &=& ab^a\biggl(\lim_{n\to\infty}\frac{-x(x+b)^{-a})(-a+1)+(x+b)^{-a+1}}{a(-a+1)}\biggr)\Big|_0^n\ \\
+     &=& ab^a\biggl(\frac{-n(n+b)^{-a})(-a+1)+(n+b)^{-a+1}}{a(-a+1)} + \frac{0(0+b)^{-a})(-a+1)+(0+b)^{-a+1}}{a(-a+1)}\biggr) \\
+     &=& ab^a\biggl(\frac{(0+b)^{-a+1}}{a(-a+1)}\biggr) \\
+     &=& ab^a\biggl(\frac{b^{-a+1}}{a(a-1)}\biggr) \\
+     &=& \frac{ab^ab^{-a+1}}{a(a-1)} \\
+     &=& \frac{b}{a-1}
+\end{eqnarray*}$$
+Therefore, the expected value of the Pareto Distribution is $\frac{b}{a-1}$. When the parameters a and b are given with $a=5$ and $b=200,000$ the expected value of the Pareto Distribution can be calculated so that the $E[X] = 50,000$. Calculations completed in R can confirm that the expected value of the Pareto Distribution is 50,000. 
+```{r,echo=TRUE}
+#packages
+library('cubature')
+
+#Expected Value
+moment_1 <- function(x) {((5)*(200000^5)*(x))/((x+200000)^(6))}
+expected_value <- adaptIntegrate(moment_1,lowerLimit = 0,upperLimit = Inf)
+expected_value$integral
+```
+
+### Variance
+The difference of the second moment and the first moment squared are used to calculate the variance of the probability density function of the Pareto Distribution. The steps provided will show how to derive the variance of the Pareto Distribution:
+$$Var[X] = E[X^2] - E[X]^2$$
+In order to calculate the variance, the second moment is required. The derivation of the second moment of the Pareto Distribution is worked out below:
+$$\begin{eqnarray*}
+E[X^2] &=& \int_{0}^{\infty} \frac{x^2ab^a}{(x+b)^{(a+1)}} \,dx \\
+       &=& ab^a\int_{0}^{\infty} x^2(x+b)^{-(a+1)} \,dx  \\
+       &=& ab^a\int_{0}^{\infty} x^2 (x+b)^{-a-1} \,dx \\
+       &=& ab^a\biggl(\frac{-x^2(x+b)^{-a}}{a}+\int_{0}^{\infty} \frac{-2x(x+b)^{-a}}{a(-a+1)} \,dx\biggr) \\
+       &=& ab^a\biggl(\frac{-x^2(x+b)^{-a}}{a}-\biggl(\frac{2x(x+b)^{-a+1}}{a(-a+1)}-\int_{0}^{\infty} \frac{2(x+b)^{-a}}{a(-a+1)}) \,dx\biggr)\biggr) \\
+       &=& ab^a\biggl(\lim_{n\to\infty}\frac{-x^2(x+b)^{-a}}{a}-\lim_{n\to\infty}\biggl(\frac{2x(x+b)^{-a+1}}{a(-a+1)}-\frac{2(x+b)^{-a+2}}{a(-a+1)(-a+2)}\biggr)\biggr) \Big|_0^n \ \\
+       &=& ab^a\biggl(\lim_{n\to\infty}\frac{-n^2(n+b)^{-a}(-a+1)(-a+2)-2n(n+b)^{-a+1}+2(n+b)^{-a+2}}{a(-a+1)(-a+2)}- \frac{0^2(0+b)^{-a}(-a+1)(-a+2)-2(0)(0+b)^{-a+1}+2(0+b)^{-a+2}}{a(-a+1)(-a+2)}\biggr) \\
+       &=& ab^a\biggl(\frac{2b^{-a+2}}{a(a-1)(a-2)}\biggr) \\
+       &=& \frac{2b^2}{(a-1)(a-2)}
+\end{eqnarray*}$$
+Now, being able to substitute the second moment into the equation will enable for the complete calculation of the variance of the Pareto Distribution. 
+$$ \begin{eqnarray*}
+Var[X] &=& E[X^2]-E[X]^2 \\
+       &=& \frac{2b^2}{(a-1)(a-2)} - \biggl(\frac{b}{a-1}\biggr)^2 \\
+       &=& \frac{2b^2}{(a-1)(a-2)} - \frac{b^2}{(a-1)^2} \\
+       &=& \frac{2b^2(a-1)-b^2(a-2)}{(a-1)^2(a-2)} \\
+       &=& \frac{ab^2}{(a-1)^2(a-2)}
+\end{eqnarray*}$$
+Therefore, the variance of the Pareto Distribution, given the parameters $a=5$ and $b=200,000$ we can calculate that the variance is $Var[X]=E[X^2]-E[X]^2$ which is $Var[X] = 4.16 \times 10^9$. Calculations completed in R can confirm that the variance of the Pareto Distribution is $4.16 \times 10^9$
+```{r,echo=TRUE}
+#packages
+library('cubature')
+
+#Variance
+moment_2<- function(x) {(((5)*(200000^5)*(x^2))/(x+200000)^(5+1))-(((5)*(200000^5)*(x))/(x+200000)^(5+1))^2}
+variance <- adaptIntegrate(moment_2,lowerLimit = 0,upperLimit = Inf)
+theovar <- variance$integral - expected_value$integral^2
+theovar
+```
+
+
+### Skewness
+To analytically calculate the skewness of the Pareto Distribution would require to find the third moment. The calculations for the third moment are intensive and require integration by parts three times over. The remainder of the calculations for the skewness and excess kurtosis will be completed through R coding. The skewness of the Pareto Distribution is as follows when $a=5$ and $b=200,000$. 
+```{r,echo=TRUE}
+#packages
+library('cubature')
+
+#Skewness
+moment_3 <- function(x) {((5)*(200000^5)*(x^3))/((x + 200000)^(5+1))}
+skewness <- adaptIntegrate(moment_3,lowerLimit = 0, upperLimit = Inf)
+skewness$integral
+```
+
+### Excess Kurtosis
+The kurtosis describes the thickness of the tail in the Pareto Distribution. To compute the excess kurtosis, the code shows that first the fourth moment needs to be computed. The fourth moment of the Pareto Distribution is the calculation for kurtosis. Then, to classify the excess kurtosis the fourth moment is subtracted by 3. 
+```{r,echo=TRUE}
+moment_4 <- function(x) {((5)*(200000^5)*(x^4))/((x + 200000)^6)}
+kurtosis <- adaptIntegrate(moment_4,lowerLimit = 0,upperLimit = Inf)
+kurtosis$integral
+
+excess_kurtosis <- kurtosis$integral - 3
+excess_kurtosis
+```
+
+## Simulations
+Creating 10,000 samples of the Pareto Distribution using the following code below and the packages _fBasics_ and _actuar_ allowed for graphics that made for a better depiction of the 10,000 samples. The histogram of the 10,000 samples follows that of the density function of the Pareto Distribution. The histogram visualization and the Pareto Distribution are similar, in that, they are skew right and most of the data is leftward. 
+```{r,echo=FALSE}
+#warning messages
+suppressWarnings(suppressMessages(library(actuar)))
+suppressWarnings(suppressMessages(library(moments)))
+
+#packages
+library('fBasics')
+library('actuar')
+
+#simulation
+a <- 5
+b <- 200000
+n <- 1000
+samples <- 10000
+x <- seq(1:samples)
+p <- rpareto(1:samples,a,b)
+
+#Graphics
+plot(p,main = "Pareto Distribution \n 10,000 Samples", xlab = "Number of Simulations",
+     ylab = "Density",type = "line")
+hist(p,breaks = 300, main = "Pareto Distribution Histogram \n 10,000 Samples", xlab = "Claims",
+     ylab = "Frequency")
+```
+
+```{r,echo=FALSE}
+pf <- function(x){((5)*(200000^5))/((x+200000)^(5+1))}
+curve(pf,from = 0, to = 400000, xlab = "Claims", ylab = "Cost", main = "Pareto Distribution PDF" )
+```
+\newpage
+
+#### Part C
+Analyzing the 10,000 samples that were created enable a comparison of the theoretical expected value, variance, skewness and excess kurtosis to determine how accurate the sampling is in comparison to the theoretical statistics. The values below elaborate on the values of the experimental mean, variance, skewness and excess kurtosis.
+
+The experimental mean of the 10,000 samples is stated below.
+```{r,echo=FALSE}
+#warning messages
+suppressWarnings(suppressMessages(library(actuar)))
+suppressWarnings(suppressMessages(library(moments)))
+
+#package
+library('moments')
+library('actuar')
+
+#simulation
+a <- 5
+b <- 200000
+n <- 1000
+samples <- 10000
+p <- rpareto(1:samples,a,b)
+
+#First Moment | Expected Value
+mo_1 <- moment(p,order = 1)
+mo_1
+
+mean(p)
+```
+The experimental variance of the 10,000 samples is stated below.
+```{r,echo=FALSE}
+#warning messages
+suppressWarnings(suppressMessages(library(actuar)))
+suppressWarnings(suppressMessages(library(moments)))
+
+#package
+library('moments')
+library('actuar')
+
+#simulation
+a <- 5
+b <- 200000
+n <- 1000
+samples <- 10000
+p <- rpareto(1:samples,a,b)
+
+#First Moment | Expected Value
+mo_1 <- moment(p,order = 1)
+mo_1
+
+#Second Moment
+mo_2 <- moment(p, order = 2)
+mo_2
+
+#Variance
+expvar <- mo_2 - mo_1^2
+expvar
+var(p)
+```
+The experimental skewness of the 10,000 samples is stated below.
+```{r,echo=FALSE}
+#warning messages
+suppressWarnings(suppressMessages(library(actuar)))
+suppressWarnings(suppressMessages(library(moments)))
+
+#package
+library('moments')
+library('actuar')
+
+#simulation
+a <- 5
+b <- 200000
+n <- 1000
+samples <- 10000
+p <- rpareto(1:samples,a,b)
+
+#Third Moment | Skewness
+mo_3 <- moment(p,order = 3)
+mo_3
+```
+The experimental excess kurtosis of the 10,000 samples is stated below.
+```{r,echo=FALSE}
+#warning messages
+suppressWarnings(suppressMessages(library(actuar)))
+suppressWarnings(suppressMessages(library(moments)))
+
+#package
+library('moments')
+library('actuar')
+
+#simulation
+a <- 5
+b <- 200000
+n <- 1000
+samples <- 10000
+p <- rpareto(1:samples,a,b)
+
+#Fourth Moment | Kurtosis
+mo_4 <- moment(p,order = 4)
+expek <- mo_4-3
+expek
+```
+The relationship the experimental and theoretical mean, variance, skewness and excess kurtosis will be discussed. In 10,000 samples, the experimental mean and theoretical mean are practically similar where the theoretical mean was 50,000 and the experimental mean of the 10,000 samples was 50,997.34 - values that are close to each other. The theoretical variance and experimental variance were also similar, but not terribly close in value. The theoretical variance was 4,166,656,566 and the experimental variance was 4,701,382,046 - differing by almost 600,000,000. The theoretical skewness and experimental skewness were similar in value. The theoretical skewness was 200,000,000,000,000 and the experimental skewness was 204,756,200,000,000. The excess kurtosis were the two theoretical and experimental values that were not similar, where the theoretical value was measured to have an excess kurtosis of $1.6 \cdot 10^{21}$ and the theoretical excess kurtosis was measured to be $7.536\cdot10^{20}$.
+
+Overall, the theoretical and experimental values are consistent with each other, except for the theoretical and experimental excess kurtosis. 
+
+## Probability of Bankrupcy
+#### Five Simulations
+The companies assets can be characterized through the piecewise  function $Z(t)$ with an initial value of $Z(1)= 1,000,000$. The function $Z(t)$ can help determine the companies assets at the end of each year through five years. Below are five sample paths of the Companies Assets through five years. The sample paths are able to be simualted due to the fact that the function that characterizes insurance claims is practically the same theoretically and analytically. This was proven in the first section. 
+```{r,echo=FALSE}
+#declaring variables
+prem <- 1000*5000
+start <- 1000000
+n.steps <- 5
+n.iter <- 5
+w <- rpareto(1000,a,b)
+prob <- rbinom(1000,1,0.1)
+total_claims <- sum(w*prob)
+assets <- rep(0,(n.steps+1))
+assets[1] <- start
+sim <- matrix(0,(n.steps+1),n.iter)
+
+#simulation
+for (i in 1:n.iter) {
+  for (j in 2:(n.steps+1)) {
+    if (assets[j-1] <= 0){
+      assets[j] = 0
+      }
+    else
+      {
+        claims <- rpareto(1000,a,b)*rbinom(1000,1,0.1)
+        total_claims <- sum(claims)
+        assets[j] <- max(assets[j-1]+prem-total_claims,0)
+      }
+  }
+  sim[,i] <- assets
+}
+
+#graphics
+plot(NA, ylim=c(min(sim),max(sim)),xlim = c(1,n.steps+1),cex.main=1.5,xlab = "Time", ylab = "Total Assets", main = "Five Sample Paths")
+for (i in 1:ncol(sim)) {
+lines(sim[,i], col = rainbow(n.iter)[i])
+}
+```
+
+The five sample paths represent the insurance companies total assets during a five year span. As you can see from the graph above the five sample paths yield varying paths with different terminating values at the end of the five years. Some of the paths lead to total loss of the assets having the company go bankrupt, while other paths lead to loss in assets from the initial value of \$1,000,000, and other paths leading to a gain in total assets that are larger than the initial value of \$1,000,000. 
+
+#### 10,000 Simulatons
+```{r,echo=FALSE}
+#declaring variables
+n.steps <- 5
+prem <- 1000*5000
+w <- rpareto(1000,a,b)
+prob <- rbinom(1000,1,0.1)
+total_claims <- sum(w*prob)
+n.iter_2 <- 10000
+assets_2 <- rep(0,(n.steps+1))
+assets_2[1] <- start
+sim_2 <- matrix(0,(n.steps+1),n.iter_2)
+
+#simulation
+for (i in 1:n.iter_2) {
+  for (j in 2:(n.steps+1)) {
+    if (assets_2[j-1] <= 0){
+      assets_2[j] = 0
+    }
+    else
+    {
+    claims <- rpareto(1000,a,b)*rbinom(1000,1,0.1)
+    total_claims <- sum(claims)
+    assets_2[j] <- max(assets_2[j-1]+prem-total_claims,0)
+    }
+}
+sim_2[,i] <- assets_2
+}
+
+#graphics
+plot(NA, ylim=c(min(sim_2),max(sim_2)),xlim = c(1,n.steps+1),cex.main=1.5,xlab = "Time", ylab = "Total Assets", main = "10,000 Sample Paths")
+for (i in 1:ncol(sim_2)) {
+lines(sim_2[,i], col = rainbow(n.iter_2)[i])
+}
+hist(sim_2, xlab = "Total Assets", main = "10,000 Simulations \n of a Companies Total Assets")
+table(sim_2)[0]
+```
+The probability of bankruptcy is calculated when the simulated value reaches the x-axis. Having the unique simulation reach zero at any point in the five years represents that the insurance company has gone bankrupt since their total assets will be zero. To calculate the likelihood that the insurance company goes bankrupt is by completing the simple probability of the number of simulations that reach zero over the total number of simulations. 
+
+Looking at the 10,000 simulations is an impossible way to calculate the number of simulations that reached zero, so organizing the information as a histogram allows for a better visualization as to how many simulations have hit bankruptcy. 
