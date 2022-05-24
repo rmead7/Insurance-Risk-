@@ -1,2 +1,2 @@
 # Insurance-Risk-
-Analyzing the likelihood of an insurance company going bankrupt, and determining the amount of money the insurance company could make in a specified time frame. 
+Analyzing the likelihood of an insurance company going bankrupt, and determining the amount of money the insurance company could make in a specified time frame. The insurance company has $1,000,000 in assests and has 1,000 customers who pay a premium at the beginning of each year.  To model the the likelihood that the certain insurance agency goes bankrupt the Pareto Distribution is used to model the likelihood. Analytical calculation from the Pareto Distribution are calculated and simulated to draw conclusions. 
